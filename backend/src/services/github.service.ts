@@ -116,53 +116,72 @@ export class GitHubService {
         return;
       }
 
-      const teamId = teamResult.rows[0].id;
+      const teamId = teamResult.rows[0].id as number;
 
-      // Get first commit time from PR
-      let firstCommitAt = null;
-      try {
-        const { data: commits } = await octokit.pulls.listCommits({
-          owner,
-          repo: repoName,
-          pull_number: pr.number,
-          per_page: 1,
-          page: 1,
-        });
+// helper
+const toDateOrNull = (v?: string | number | Date | null) =>
+  v == null ? null : new Date(v);
 
-        if (commits.length > 0) {
-          firstCommitAt = new Date(commits[0].commit.author.date);
-        }
-      } catch (error) {
-        console.error(`Error fetching PR commits for #${pr.number}:`, error);
-      }
+// Get first commit time from PR (author date → fallback to committer date)
+let firstCommitAt: Date | null = null;
+try {
+  const { data: commits } = await octokit.pulls.listCommits({
+    owner,
+    repo: repoName,
+    pull_number: pr.number,
+    per_page: 1,
+    page: 1,
+  });
 
-      await pool.query(
-        `INSERT INTO pull_requests (
-          team_id, repo_name, pr_number, title, author, state,
-          created_at, merged_at, closed_at, first_commit_at,
-          base_branch, head_branch, commits_count
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-        ON CONFLICT (repo_name, pr_number) DO UPDATE SET
-          state = EXCLUDED.state,
-          merged_at = EXCLUDED.merged_at,
-          closed_at = EXCLUDED.closed_at,
-          first_commit_at = EXCLUDED.first_commit_at`,
-        [
-          teamId,
-          repoName,
-          pr.number,
-          pr.title,
-          pr.user.login,
-          pr.merged_at ? 'merged' : pr.state,
-          new Date(pr.created_at),
-          pr.merged_at ? new Date(pr.merged_at) : null,
-          pr.closed_at ? new Date(pr.closed_at) : null,
-          firstCommitAt,
-          pr.base.ref,
-          pr.head.ref,
-          pr.commits || 0,
-        ]
-      );
+  const c0 = commits?.[0];
+  const firstCommitDateStr =
+    c0?.commit?.author?.date ?? c0?.commit?.committer?.date ?? null;
+
+  firstCommitAt = toDateOrNull(firstCommitDateStr);
+} catch (error) {
+  console.error(`Error fetching PR commits for #${pr.number}:`, error);
+}
+
+// Safely coerce PR fields
+const createdAt = toDateOrNull(pr?.created_at);
+const mergedAt  = toDateOrNull(pr?.merged_at ?? null);
+const closedAt  = toDateOrNull(pr?.closed_at ?? null);
+
+const title       = pr?.title ?? "";
+const authorLogin = pr?.user?.login ?? "unknown";
+const baseRef     = pr?.base?.ref ?? null;
+const headRef     = pr?.head?.ref ?? null;
+const commitsCnt  = typeof pr?.commits === "number" ? pr.commits : 0;
+const state       = pr?.merged_at ? "merged" : (pr?.state ?? "open");
+
+await pool.query(
+  `INSERT INTO pull_requests (
+     team_id, repo_name, pr_number, title, author, state,
+     created_at, merged_at, closed_at, first_commit_at,
+     base_branch, head_branch, commits_count
+   ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+   ON CONFLICT (repo_name, pr_number) DO UPDATE SET
+     state = EXCLUDED.state,
+     merged_at = EXCLUDED.merged_at,
+     closed_at = EXCLUDED.closed_at,
+     first_commit_at = EXCLUDED.first_commit_at`,
+  [
+    teamId,
+    repoName,
+    pr.number,
+    title,
+    authorLogin,
+    state,
+    createdAt,
+    mergedAt,
+    closedAt,
+    firstCommitAt,
+    baseRef,
+    headRef,
+    commitsCnt,
+  ],
+);
+
 
       // Update commits with PR information
       if (pr.merged_at) {

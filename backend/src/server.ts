@@ -59,9 +59,9 @@ const server = createServer(app);
 const wsServer = new WebSocketServer(server);
 
 // Start server
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
+server.listen(Number(PORT) || 3000, "0.0.0.0", () => {
+  console.log(`Server running on http://0.0.0.0:${PORT}`);
+  console.log(`WebSocket server at ws://0.0.0.0:${PORT}/ws`);
 
   // Start scheduled tasks
   scheduler.start();

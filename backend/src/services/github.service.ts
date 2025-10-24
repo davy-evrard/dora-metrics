@@ -7,6 +7,49 @@ const octokit = new Octokit({
 
 export class GitHubService {
   /**
+   * List repositories for the configured GitHub org
+   */
+  async listOrgRepos(owner?: string): Promise<string[]> {
+    const org = owner || process.env.GITHUB_ORG || '';
+    if (!org) throw new Error('GITHUB_ORG is not configured');
+
+    const names: string[] = [];
+    let page = 1;
+    const per_page = 100;
+    // Simple pagination to avoid adding extra plugins
+    // Filter out forks/archived by default
+    while (true) {
+      const { data } = await octokit.repos.listForOrg({
+        org,
+        type: 'all',
+        per_page,
+        page,
+        sort: 'full_name',
+        direction: 'asc',
+      });
+      if (!data || data.length === 0) break;
+      for (const r of data) {
+        if (r.archived || r.fork) continue;
+        if (r.name) names.push(r.name);
+      }
+      if (data.length < per_page) break;
+      page += 1;
+    }
+    return names;
+  }
+
+  /**
+   * Replace a team's github_repos with current org repos
+   */
+  async syncTeamRepos(teamId: number, owner?: string): Promise<string[]> {
+    const repos = await this.listOrgRepos(owner);
+    await pool.query(
+      `UPDATE teams SET github_repos = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [teamId, repos]
+    );
+    return repos;
+  }
+  /**
    * Fetch commits from a repository
    */
   async fetchCommits(owner: string, repo: string, since?: Date): Promise<void> {

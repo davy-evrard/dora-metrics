@@ -9,7 +9,14 @@ router.get('/summary/:teamId', async (req, res) => {
     const teamId = parseInt(req.params.teamId);
     const days = parseInt(req.query.days as string) || 30;
 
-    const summary = await metricsService.getMetricsSummary(teamId, days);
+    const repoParam = (req.query.repo as string) || '';
+    const reposParam = (req.query.repos as string) || '';
+    const repos = (reposParam || repoParam)
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const summary = await metricsService.getMetricsSummary(teamId, days, repos.length ? repos : undefined);
     res.json(summary);
   } catch (error) {
     console.error('Error fetching metrics summary:', error);
@@ -23,7 +30,14 @@ router.get('/historical/:teamId', async (req, res) => {
     const teamId = parseInt(req.params.teamId);
     const days = parseInt(req.query.days as string) || 30;
 
-    const metrics = await metricsService.getHistoricalMetrics(teamId, days);
+    const repoParam = (req.query.repo as string) || '';
+    const reposParam = (req.query.repos as string) || '';
+    const repos = (reposParam || repoParam)
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const metrics = await metricsService.getHistoricalMetrics(teamId, days, repos.length ? repos : undefined);
     res.json(metrics);
   } catch (error) {
     console.error('Error fetching historical metrics:', error);
@@ -51,7 +65,14 @@ router.get('/chart/deployment-frequency/:teamId', async (req, res) => {
     const teamId = parseInt(req.params.teamId);
     const days = parseInt(req.query.days as string) || 30;
 
-    const metrics = await metricsService.getHistoricalMetrics(teamId, days);
+    const repoParam = (req.query.repo as string) || '';
+    const reposParam = (req.query.repos as string) || '';
+    const repos = (reposParam || repoParam)
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const metrics = await metricsService.getHistoricalMetrics(teamId, days, repos.length ? repos : undefined);
 
     const chartData = metrics.map((m) => ({
       date: m.date,
@@ -72,7 +93,14 @@ router.get('/chart/lead-time/:teamId', async (req, res) => {
     const teamId = parseInt(req.params.teamId);
     const days = parseInt(req.query.days as string) || 30;
 
-    const metrics = await metricsService.getHistoricalMetrics(teamId, days);
+    const repoParam = (req.query.repo as string) || '';
+    const reposParam = (req.query.repos as string) || '';
+    const repos = (reposParam || repoParam)
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const metrics = await metricsService.getHistoricalMetrics(teamId, days, repos.length ? repos : undefined);
 
     const chartData = metrics.map((m) => ({
       date: m.date,
@@ -93,7 +121,14 @@ router.get('/chart/change-failure-rate/:teamId', async (req, res) => {
     const teamId = parseInt(req.params.teamId);
     const days = parseInt(req.query.days as string) || 30;
 
-    const metrics = await metricsService.getHistoricalMetrics(teamId, days);
+    const repoParam = (req.query.repo as string) || '';
+    const reposParam = (req.query.repos as string) || '';
+    const repos = (reposParam || repoParam)
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const metrics = await metricsService.getHistoricalMetrics(teamId, days, repos.length ? repos : undefined);
 
     const chartData = metrics.map((m) => ({
       date: m.date,

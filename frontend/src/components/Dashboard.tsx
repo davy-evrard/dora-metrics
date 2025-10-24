@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { metricsAPI, syncAPI } from '../services/api';
+import { metricsAPI, syncAPI, teamsAPI } from '../services/api';
 import { MetricsSummary, ChartDataPoint } from '../types';
 import wsService from '../services/websocket';
 import MetricCard from './MetricCard';
@@ -20,21 +20,39 @@ const Dashboard: React.FC<DashboardProps> = ({ teamId, teamName }) => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [period, setPeriod] = useState(30);
+  const [repos, setRepos] = useState<string[]>([]);
+  const [selectedRepo, setSelectedRepo] = useState<string>('');
+
+  useEffect(() => {
+    // Load team repos when team changes
+    (async () => {
+      try {
+        const t = await teamsAPI.getById(teamId);
+        setRepos(t.data.github_repos || []);
+        setSelectedRepo('');
+      } catch (e) {
+        console.error('Error loading team repos', e);
+        setRepos([]);
+        setSelectedRepo('');
+      }
+    })();
+  }, [teamId]);
 
   useEffect(() => {
     loadData();
     setupWebSocket();
-  }, [teamId, period]);
+  }, [teamId, period, selectedRepo]);
 
   const loadData = async () => {
     try {
       setLoading(true);
 
+      const repo = selectedRepo || undefined;
       const [summaryRes, deploymentRes, leadTimeRes, failureRateRes] = await Promise.all([
-        metricsAPI.getSummary(teamId, period),
-        metricsAPI.getDeploymentFrequencyChart(teamId, period),
-        metricsAPI.getLeadTimeChart(teamId, period),
-        metricsAPI.getChangeFailureRateChart(teamId, period),
+        metricsAPI.getSummary(teamId, period, repo),
+        metricsAPI.getDeploymentFrequencyChart(teamId, period, repo),
+        metricsAPI.getLeadTimeChart(teamId, period, repo),
+        metricsAPI.getChangeFailureRateChart(teamId, period, repo),
       ]);
 
       setSummary(summaryRes.data);
@@ -53,7 +71,7 @@ const Dashboard: React.FC<DashboardProps> = ({ teamId, teamName }) => {
     wsService.subscribe(teamId);
 
     const handleMetricsUpdate = (data: any) => {
-      if (data.teamId === teamId) {
+      if (data.teamId === teamId && !selectedRepo) {
         setSummary(data.data);
       }
     };
@@ -105,6 +123,16 @@ const Dashboard: React.FC<DashboardProps> = ({ teamId, teamName }) => {
             <option value={7}>Last 7 days</option>
             <option value={30}>Last 30 days</option>
             <option value={90}>Last 90 days</option>
+          </select>
+          <select
+            value={selectedRepo}
+            onChange={(e) => setSelectedRepo(e.target.value)}
+            className="repo-select"
+          >
+            <option value="">All repositories</option>
+            {repos.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
           </select>
           <button onClick={handleSync} disabled={syncing} className="sync-button">
             {syncing ? 'Syncing...' : 'Sync Data'}

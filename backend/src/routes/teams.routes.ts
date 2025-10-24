@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import pool from '../database/connection';
+import githubService from '../services/github.service';
 
 const router = Router();
 
@@ -89,6 +90,26 @@ router.delete('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting team:', error);
     res.status(500).json({ error: 'Failed to delete team' });
+  }
+});
+
+// Auto-populate a team's repos from GitHub org
+router.post('/:id/repos/sync', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const owner = (req.body && req.body.owner) || process.env.GITHUB_ORG;
+
+    // Ensure team exists
+    const team = await pool.query('SELECT id FROM teams WHERE id = $1', [id]);
+    if (team.rows.length === 0) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+
+    const repos = await githubService.syncTeamRepos(Number(id), owner);
+    res.json({ team_id: Number(id), count: repos.length, repos });
+  } catch (error) {
+    console.error('Error syncing team repos:', error);
+    res.status(500).json({ error: 'Failed to sync team repos' });
   }
 });
 

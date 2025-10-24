@@ -21,18 +21,18 @@ export const teamsAPI = {
 
 // Metrics API
 export const metricsAPI = {
-  getSummary: (teamId: number, days: number = 30) =>
-    api.get<MetricsSummary>(`/api/metrics/summary/${teamId}`, { params: { days } }),
-  getHistorical: (teamId: number, days: number = 30) =>
-    api.get<HistoricalMetric[]>(`/api/metrics/historical/${teamId}`, { params: { days } }),
+  getSummary: (teamId: number, days: number = 30, repo?: string) =>
+    api.get<MetricsSummary>(`/api/metrics/summary/${teamId}`, { params: { days, ...(repo ? { repo } : {}) } }),
+  getHistorical: (teamId: number, days: number = 30, repo?: string) =>
+    api.get<HistoricalMetric[]>(`/api/metrics/historical/${teamId}`, { params: { days, ...(repo ? { repo } : {}) } }),
   calculate: (teamId: number, days: number = 30) =>
     api.post(`/api/metrics/calculate/${teamId}`, { days }),
-  getDeploymentFrequencyChart: (teamId: number, days: number = 30) =>
-    api.get<ChartDataPoint[]>(`/api/metrics/chart/deployment-frequency/${teamId}`, { params: { days } }),
-  getLeadTimeChart: (teamId: number, days: number = 30) =>
-    api.get<ChartDataPoint[]>(`/api/metrics/chart/lead-time/${teamId}`, { params: { days } }),
-  getChangeFailureRateChart: (teamId: number, days: number = 30) =>
-    api.get<ChartDataPoint[]>(`/api/metrics/chart/change-failure-rate/${teamId}`, { params: { days } }),
+  getDeploymentFrequencyChart: (teamId: number, days: number = 30, repo?: string) =>
+    api.get<ChartDataPoint[]>(`/api/metrics/chart/deployment-frequency/${teamId}`, { params: { days, ...(repo ? { repo } : {}) } }),
+  getLeadTimeChart: (teamId: number, days: number = 30, repo?: string) =>
+    api.get<ChartDataPoint[]>(`/api/metrics/chart/lead-time/${teamId}`, { params: { days, ...(repo ? { repo } : {}) } }),
+  getChangeFailureRateChart: (teamId: number, days: number = 30, repo?: string) =>
+    api.get<ChartDataPoint[]>(`/api/metrics/chart/change-failure-rate/${teamId}`, { params: { days, ...(repo ? { repo } : {}) } }),
 };
 
 // Sync API
